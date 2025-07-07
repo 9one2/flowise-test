@@ -448,15 +448,17 @@
                 html += '<div class="violations">';
                 html += '<div class="section-subtitle">⚠️ 위반사항</div>';
                 result.violations.forEach(violation => {
-                    // violation은 [element, principle, issue, severity, fix] 형태
-                    const [element, principle, issue, severity, fix] = violation;
-                    const severityClass = severity === 'high' ? 'high' : (severity === 'moderate' ? 'medium' : 'low');
+                    const severityClass = violation.severity?.toLowerCase() === 'high' ? 'high' : 
+                                        (violation.severity?.toLowerCase() === 'moderate' ? 'medium' : 'low');
                     
                     html += `<div class="violation-item ${severityClass}">`;
-                    html += `<div class="violation-header">${principle} - ${element}</div>`;
-                    html += `<div class="violation-text"><strong>문제:</strong> ${issue}</div>`;
-                    if (fix) {
-                        html += `<div class="violation-fix">💡 <strong>해결방법:</strong> ${fix}</div>`;
+                    html += `<div class="violation-header">${violation.principle} - ${violation.element}</div>`;
+                    html += `<div class="violation-text"><strong>문제:</strong> ${violation.issue}</div>`;
+                    if (violation.solution) {
+                        html += `<div class="violation-fix">💡 <strong>해결방법:</strong> ${violation.solution}</div>`;
+                    }
+                    if (violation.impact) {
+                        html += `<div class="violation-fix">📊 <strong>영향:</strong> ${violation.impact}</div>`;
                     }
                     html += '</div>';
                 });
@@ -468,11 +470,16 @@
                 html += '<div class="positive-aspects">';
                 html += '<div class="section-subtitle">✅ 준수사항</div>';
                 result.compliances.forEach(compliance => {
-                    // compliance는 [element, principle, reason, level] 형태
-                    const [element, principle, reason, level] = compliance;
-                    
                     html += '<div class="positive-item">';
-                    html += `<div class="positive-item-text"><strong>${principle}:</strong> ${reason} (${element})</div>`;
+                    html += `<div class="positive-item-text">`;
+                    html += `<strong>${compliance.principle}:</strong> ${compliance.strength}`;
+                    if (compliance.element) {
+                        html += ` (${compliance.element})`;
+                    }
+                    if (compliance.quantitative_effect) {
+                        html += `<br>📊 <strong>효과:</strong> ${compliance.quantitative_effect}`;
+                    }
+                    html += `</div>`;
                     html += '</div>';
                 });
                 html += '</div>';
@@ -483,15 +490,17 @@
                 html += '<div class="recommendations">';
                 html += '<div class="section-subtitle">💡 추천사항</div>';
                 result.recommendations.forEach(recommendation => {
-                    // recommendation은 [priority, suggestion, impact] 형태
-                    const [priority, suggestion, impact] = recommendation;
-                    const priorityBadge = priority === 'high' ? '🔴' : (priority === 'medium' ? '🟡' : '🟢');
+                    const priorityBadge = recommendation.priority?.toLowerCase() === 'high' ? '🔴' : 
+                                        (recommendation.priority?.toLowerCase() === 'medium' ? '🟡' : '🟢');
                     
                     html += '<div class="recommendation-item">';
-                    html += `<div class="recommendation-header">${priorityBadge} ${priority.toUpperCase()}</div>`;
-                    html += `<div class="recommendation-text">${suggestion}</div>`;
-                    if (impact) {
-                        html += `<div class="recommendation-benefit">✨ <strong>효과:</strong> ${impact}</div>`;
+                    html += `<div class="recommendation-header">${priorityBadge} ${recommendation.priority?.toUpperCase() || 'NORMAL'}</div>`;
+                    html += `<div class="recommendation-text">${recommendation.suggestion}</div>`;
+                    if (recommendation.expected_effect) {
+                        html += `<div class="recommendation-benefit">✨ <strong>예상 효과:</strong> ${recommendation.expected_effect}</div>`;
+                    }
+                    if (recommendation.case_result) {
+                        html += `<div class="recommendation-benefit">📋 <strong>사례 결과:</strong> ${recommendation.case_result}</div>`;
                     }
                     html += '</div>';
                 });

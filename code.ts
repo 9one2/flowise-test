@@ -344,65 +344,94 @@ figma.ui.onmessage = async (msg: { type: string; [key: string]: any }) => {
         console.log("🔍 실제 분석 요청 시작");
         
         // 디자인 원칙 기반 분석 프롬프트
-        const analysisPrompt = `다음 Figma 디자인 요소를 우리 회사의 12가지 디자인 원칙에 따라 분석해주세요:
+        const analysisPrompt = `선택된 Figma 디자인 요소를 우리 회사의 12가지 디자인 원칙에 따라 분석해주세요. 각 평가는 반드시 구체적인 근거와 정량적 영향을 포함해야 합니다.
 
+분석 대상:
 ${selection}
 
-**중요: 모든 응답은 한글로 작성하고, 각 평가에 대해 구체적인 근거와 정량적 영향을 포함해주세요.**
+**분석 시 반드시 포함해야 할 요소:**
+- 문서의 구체적 수치와 비교 데이터 인용
+- 원칙 위반이 비즈니스에 미치는 실제 임팩트 설명
+- 문서 사례를 통한 개선 방향 제시
+- 사용자가 왜 이 원칙을 놓쳤는지에 대한 인사이트
 
-다음 JSON 형태로만 응답해주세요 (마크다운 블록 없이):
+다음 JSON 형태로만 응답해주세요:
 {
-  "summary": "1-2문장의 전체 평가 요약 (한글)",
+  "summary": "전체 평가 요약 (1-2문장, 문서 사례 기반)",
   "violations": [
-    ["요소명", "원칙명", "문제점", "심각도", "해결방안", "예상되는 정량적 영향"]
+    {
+      "element": "요소명",
+      "principle": "위반된원칙",
+      "issue": "문제점과문서사례",
+      "severity": "심각도",
+      "solution": "문서기반해결방안",
+      "impact": "예상되는정량적영향"
+    }
   ],
   "compliances": [
-    ["요소명", "원칙명", "잘된점", "영향도", "실제 사례 기반 정량적 효과"]
+    {
+      "element": "요소명",
+      "principle": "준수한원칙",
+      "strength": "잘된점과문서사례",
+      "impact_level": "임팩트수준",
+      "quantitative_effect": "정량적효과"
+    }
   ],
   "recommendations": [
-    ["우선순위", "권장사항", "예상효과", "유사 개선 사례의 정량적 결과"]
+    {
+      "priority": "우선순위",
+      "suggestion": "개선권장사항",
+      "expected_effect": "문서기반예상효과",
+      "case_result": "유사사례결과"
+    }
+  ],
+  "insights": [
+    {
+      "principle": "원칙명",
+      "missed_reason": "왜놓쳤는지분석",
+      "business_impact": "비즈니스임팩트",
+      "lesson": "문서사례기반교훈"
+    }
   ],
   "score": {
-    "overall": 1-100,
+    "overall": "1-100",
     "principles": {
-      "Simplicity": 1-10,
-      "Casual Concept": 1-10,
-      "Minimum Feature": 1-10,
-      "Less Policy": 1-10,
-      "One Thing per One Page": 1-10,
-      "Tap & Scroll": 1-10,
-      "Easy to Answer": 1-10,
-      "Value First, Cost Later": 1-10,
-      "No Ads Patterns": 1-10,
-      "Context-based": 1-10,
-      "No More Loading": 1-10,
-      "Sleek Experience": 1-10
+      "Simplicity": "1-10",
+      "Casual Concept": "1-10",
+      "Minimum Feature": "1-10",
+      "Less Policy": "1-10",
+      "One Thing per One Page": "1-10",
+      "Tap & Scroll": "1-10",
+      "Easy to Answer": "1-10",
+      "Value First, Cost Later": "1-10",
+      "No Ads Patterns": "1-10",
+      "Context-based": "1-10",
+      "No More Loading": "1-10",
+      "Sleek Experience": "1-10"
     }
-  },
-  "insights": {
-    "impact_analysis": "이 원칙들을 지키지 않았을 때의 구체적인 영향 (정량적 수치 포함)",
-    "success_factors": "이 원칙들이 중요한 이유와 성공 사례",
-    "implementation_guide": "실제 구현 시 주의점과 체크리스트"
   }
 }
 
 예시:
 {
-  "summary": "선택된 디자인은 Simplicity와 One Thing per One Page 원칙에서 심각한 위반사항이 발견되었습니다. 특히 한 화면에 너무 많은 정보를 담아 사용자의 인지 부담이 크게 증가했습니다.",
   "violations": [
-    ["송금 화면", "Simplicity", "한 화면에 8개의 입력 필드와 3개의 툴팁이 혼재", "높음", "핵심 3개 필드만 남기고 나머지는 '추가 설정'으로 이동", "기존 사례에서 입력 필드 축소 시 완료율 68%→82% 증가"]
+    {
+      "element": "로그인 버튼",
+      "principle": "단순함",
+      "issue": "한 화면에 너무 많은 요소 배치로 전환율이 14%p 감소 위험",
+      "severity": "높음",
+      "solution": "핵심 3개 요소만 남기면 전환율 14%p 향상 가능",
+      "impact": "전환율 14%p 감소 예상"
+    }
   ],
-  "compliances": [
-    ["메인 헤더", "Casual Concept", "'계좌이체' 대신 '돈 보내기'로 친숙한 용어 사용", "높음", "유사 개선으로 신규 사용자 이탈률 22%→15% 감소"]
-  ],
-  "recommendations": [
-    ["높음", "송금 화면 단순화", "사용자 만족도 증가", "유사 프로젝트에서 평균 작업 시간 46초→29초 감소"]
-  ],
-  "insights": {
-    "impact_analysis": "단순성 원칙 위반 시 송금 완료율 75%→61% 하락, 작업 시간 81% 증가, 이탈률 175% 증가가 관찰됨",
-    "success_factors": "직관적인 용어 사용과 단순한 UI는 신규 사용자의 진입 장벽을 낮추고 전환율을 높이는 핵심 요소",
-    "implementation_guide": "1) 모든 화면은 3초 내 주요 정보 인지 가능해야 함 2) 입력 필드는 3개 이하 유지 3) 전문 용어는 모두 일상적 표현으로 변환"
-  }
+  "insights": [
+    {
+      "principle": "단순함",
+      "missed_reason": "핵심 기능과 부가 기능을 구분하지 않아 모든 것을 노출하려는 욕구",
+      "business_impact": "작업 시간을 81% 증가시키고 이탈률을 175% 증가시킴",
+      "lesson": "핵심 기능에 집중하여 37% 시간 단축 달성 가능"
+    }
+  ]
 }`;
         
         console.log("📋 분석 프롬프트:", analysisPrompt);
@@ -454,6 +483,27 @@ ${selection}
               // 실제 분석 결과를 JSON으로 파싱
               const analysisResult = JSON.parse(extractedJson);
               console.log("✅ 분석 결과 파싱 성공:", analysisResult);
+              
+              // violations 필드가 없거나 배열이 아닌 경우 처리
+              if (!analysisResult.violations || !Array.isArray(analysisResult.violations)) {
+                analysisResult.violations = [];
+              }
+              
+              // compliances 필드가 없거나 배열이 아닌 경우 처리
+              if (!analysisResult.compliances || !Array.isArray(analysisResult.compliances)) {
+                analysisResult.compliances = [];
+              }
+              
+              // recommendations 필드가 없거나 배열이 아닌 경우 처리
+              if (!analysisResult.recommendations || !Array.isArray(analysisResult.recommendations)) {
+                analysisResult.recommendations = [];
+              }
+              
+              // insights 필드가 없거나 배열이 아닌 경우 처리
+              if (!analysisResult.insights || !Array.isArray(analysisResult.insights)) {
+                analysisResult.insights = [];
+              }
+              
               result = analysisResult;
             } catch (analysisParseError) {
               console.error("❌ 분석 결과 파싱 실패:", analysisParseError);
