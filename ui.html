@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Self-Check Design Assistant</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: var(--figma-color-text);
+            background: var(--figma-color-bg);
+            padding: 16px;
+        }
+        
+        .header {
+            background: var(--figma-color-bg-brand);
+            color: var(--figma-color-text-onbrand);
+            padding: 12px 16px;
+            margin: -16px -16px 16px -16px;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .section {
+            margin-bottom: 20px;
+        }
+        
+        .section-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--figma-color-text);
+            font-size: 13px;
+        }
+        
+        .selection-info {
+            background: var(--figma-color-bg-secondary);
+            border: 1px solid var(--figma-color-border);
+            border-radius: 6px;
+            padding: 12px;
+            min-height: 80px;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 10px;
+            line-height: 1.4;
+            color: var(--figma-color-text-secondary);
+        }
+        
+        .selection-info.empty {
+            color: var(--figma-color-text-disabled);
+            font-style: italic;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .button {
+            flex: 1;
+            background: var(--figma-color-bg-brand);
+            color: var(--figma-color-text-onbrand);
+            border: none;
+            border-radius: 6px;
+            padding: 10px 16px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .button:hover:not(:disabled) {
+            background: var(--figma-color-bg-brand-hover);
+        }
+        
+        .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .button.secondary {
+            background: var(--figma-color-bg-secondary);
+            color: var(--figma-color-text);
+            border: 1px solid var(--figma-color-border);
+        }
+        
+        .button.secondary:hover:not(:disabled) {
+            background: var(--figma-color-bg-hover);
+        }
+        
+        .result-container {
+            background: var(--figma-color-bg-secondary);
+            border: 1px solid var(--figma-color-border);
+            border-radius: 6px;
+            min-height: 150px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .result-content {
+            padding: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .loading {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            height: 150px;
+            color: var(--figma-color-text-secondary);
+        }
+        
+        .loading.show {
+            display: flex;
+        }
+        
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--figma-color-border);
+            border-top: 2px solid var(--figma-color-bg-brand);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .result {
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 11px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            color: var(--figma-color-text-secondary);
+        }
+        
+        .analysis-result {
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        
+        .score-badge {
+            display: inline-block;
+            background: var(--figma-color-bg-brand);
+            color: var(--figma-color-text-onbrand);
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 11px;
+            margin-bottom: 12px;
+        }
+        
+        .score-good { background: #0d9488; }
+        .score-medium { background: #d97706; }
+        .score-poor { background: #dc2626; }
+        
+        .violations {
+            margin-bottom: 16px;
+        }
+        
+        .violation-item {
+            background: var(--figma-color-bg);
+            border: 1px solid var(--figma-color-border);
+            border-radius: 4px;
+            padding: 8px;
+            margin-bottom: 8px;
+            border-left: 3px solid var(--figma-color-text-danger);
+        }
+        
+        .violation-item.high {
+            border-left-color: #dc2626;
+        }
+        
+        .violation-item.medium {
+            border-left-color: #d97706;
+        }
+        
+        .violation-item.low {
+            border-left-color: #65a30d;
+        }
+        
+        .violation-header {
+            font-weight: 600;
+            font-size: 11px;
+            color: var(--figma-color-text);
+            margin-bottom: 4px;
+        }
+        
+        .violation-text {
+            font-size: 10px;
+            color: var(--figma-color-text-secondary);
+            margin-bottom: 4px;
+        }
+        
+        .violation-fix {
+            font-size: 10px;
+            color: var(--figma-color-text-secondary);
+            background: var(--figma-color-bg-secondary);
+            padding: 4px 6px;
+            border-radius: 3px;
+            font-style: italic;
+        }
+        
+        .recommendations {
+            margin-bottom: 16px;
+        }
+        
+        .recommendation-item {
+            background: var(--figma-color-bg);
+            border: 1px solid var(--figma-color-border);
+            border-radius: 4px;
+            padding: 8px;
+            margin-bottom: 8px;
+            border-left: 3px solid var(--figma-color-bg-brand);
+        }
+        
+        .recommendation-header {
+            font-weight: 600;
+            font-size: 11px;
+            color: var(--figma-color-text);
+            margin-bottom: 4px;
+        }
+        
+        .recommendation-text {
+            font-size: 10px;
+            color: var(--figma-color-text-secondary);
+            margin-bottom: 4px;
+        }
+        
+        .recommendation-benefit {
+            font-size: 10px;
+            color: var(--figma-color-text-secondary);
+            background: var(--figma-color-bg-secondary);
+            padding: 4px 6px;
+            border-radius: 3px;
+            font-style: italic;
+        }
+        
+        .positive-aspects {
+            margin-bottom: 16px;
+        }
+        
+        .positive-item {
+            background: var(--figma-color-bg);
+            border: 1px solid var(--figma-color-border);
+            border-radius: 4px;
+            padding: 8px;
+            margin-bottom: 6px;
+            border-left: 3px solid #0d9488;
+        }
+        
+        .positive-item-text {
+            font-size: 10px;
+            color: var(--figma-color-text-secondary);
+        }
+        
+        .section-subtitle {
+            font-weight: 600;
+            font-size: 12px;
+            color: var(--figma-color-text);
+            margin-bottom: 8px;
+        }
+        
+        .design-system-gaps {
+            margin-bottom: 16px;
+        }
+        
+        .gap-item {
+            background: var(--figma-color-bg);
+            border: 1px solid var(--figma-color-border);
+            border-radius: 4px;
+            padding: 8px;
+            margin-bottom: 6px;
+            border-left: 3px solid #f59e0b;
+        }
+        
+        .gap-text {
+            font-size: 10px;
+            color: var(--figma-color-text-secondary);
+        }
+        
+        .violation-item.critical {
+            border-left-color: #dc2626;
+            background: rgba(220, 38, 38, 0.05);
+        }
+        
+        .error {
+            color: var(--figma-color-text-danger);
+            font-weight: 500;
+        }
+        
+        .empty-state {
+            text-align: center;
+            color: var(--figma-color-text-disabled);
+            font-style: italic;
+            padding: 40px 20px;
+        }
+        
+        .close-button {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            background: var(--figma-color-bg-secondary);
+            color: var(--figma-color-text);
+            border: 1px solid var(--figma-color-border);
+            border-radius: 4px;
+            padding: 6px 12px;
+            font-size: 11px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s ease;
+        }
+        
+        .close-button:hover {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        🎨 Self-Check Design Assistant
+    </div>
+    
+    <div class="section">
+        <div class="section-title">선택된 요소</div>
+        <div id="selection-info" class="selection-info empty">
+            요소를 선택하고 플러그인을 실행해주세요.
+        </div>
+    </div>
+    
+    <div class="button-group">
+        <button id="refresh-btn" class="button secondary">새로고침</button>
+        <button id="analyze-btn" class="button">분석 실행</button>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">분석 결과</div>
+        <div class="result-container">
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                AI 분석 중...
+            </div>
+            <div id="result-content" class="result-content">
+                <div class="empty-state">
+                    분석 버튼을 클릭하여 디자인 원칙 검토를 시작하세요.
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <button id="close-btn" class="close-button">닫기</button>
+
+<script>
+        // UI 상태 관리
+        const elements = {
+            selectionInfo: document.getElementById('selection-info'),
+            refreshBtn: document.getElementById('refresh-btn'),
+            analyzeBtn: document.getElementById('analyze-btn'),
+            loading: document.getElementById('loading'),
+            resultContent: document.getElementById('result-content'),
+            closeBtn: document.getElementById('close-btn')
+        };
+        
+        let isAnalyzing = false;
+        
+        // 로딩 상태 업데이트
+        function setLoading(loading) {
+            isAnalyzing = loading;
+            elements.loading.classList.toggle('show', loading);
+            elements.analyzeBtn.disabled = loading;
+            elements.refreshBtn.disabled = loading;
+            
+            if (loading) {
+                elements.resultContent.innerHTML = '';
+            }
+        }
+        
+        // 선택 정보 업데이트
+        function updateSelectionInfo(info) {
+            elements.selectionInfo.textContent = info;
+            elements.selectionInfo.classList.toggle('empty', info === '선택된 요소가 없습니다.');
+        }
+        
+        // 점수에 따른 클래스 반환
+        function getScoreClass(score) {
+            const numScore = parseInt(score);
+            // 100점 만점인 경우
+            if (numScore > 10) {
+                if (numScore >= 80) return 'score-good';
+                if (numScore >= 60) return 'score-medium';
+                return 'score-poor';
+            }
+            // 10점 만점인 경우
+            if (numScore >= 8) return 'score-good';
+            if (numScore >= 6) return 'score-medium';
+            return 'score-poor';
+        }
+        
+        // 분석 결과를 HTML로 포맷팅
+        function formatAnalysisResult(result) {
+            let html = '<div class="analysis-result">';
+            
+            // Flowise 실제 응답 형태 처리
+            if (result.score && typeof result.score === 'object') {
+                // 전체 점수 표시
+                if (result.score.overall) {
+                    const scoreClass = getScoreClass(result.score.overall);
+                    html += `<div class="score-badge ${scoreClass}">전체 점수: ${result.score.overall}/100</div>`;
+                }
+                
+                // 세부 원칙별 점수
+                if (result.score.principles) {
+                    html += '<div class="section-subtitle">📊 원칙별 점수</div>';
+                    html += '<div style="margin-bottom: 16px;">';
+                    Object.entries(result.score.principles).forEach(([principle, score]) => {
+                        const scoreClass = getScoreClass(Number(score) * 10); // 10점 만점으로 변환
+                        html += `<div style="display: inline-block; margin: 4px 8px 4px 0;">`;
+                        html += `<span style="background: var(--figma-color-bg-secondary); padding: 2px 6px; border-radius: 4px; font-size: 10px;">${principle}: ${score}/10</span>`;
+                        html += '</div>';
+                    });
+                    html += '</div>';
+                }
+            }
+            
+            // 요약 정보
+            if (result.summary) {
+                html += '<div class="section-subtitle">📋 분석 요약</div>';
+                html += `<div style="padding: 8px; background: var(--figma-color-bg-secondary); border-radius: 4px; margin-bottom: 12px; font-size: 11px;">${result.summary}</div>`;
+            }
+            
+            // 위반사항 (배열 형태)
+            if (result.violations && result.violations.length > 0) {
+                html += '<div class="violations">';
+                html += '<div class="section-subtitle">⚠️ 위반사항</div>';
+                result.violations.forEach(violation => {
+                    // violation은 [element, principle, issue, severity, fix] 형태
+                    const [element, principle, issue, severity, fix] = violation;
+                    const severityClass = severity === 'high' ? 'high' : (severity === 'moderate' ? 'medium' : 'low');
+                    
+                    html += `<div class="violation-item ${severityClass}">`;
+                    html += `<div class="violation-header">${principle} - ${element}</div>`;
+                    html += `<div class="violation-text"><strong>문제:</strong> ${issue}</div>`;
+                    if (fix) {
+                        html += `<div class="violation-fix">💡 <strong>해결방법:</strong> ${fix}</div>`;
+                    }
+                    html += '</div>';
+                });
+                html += '</div>';
+            }
+            
+            // 준수사항 (배열 형태)
+            if (result.compliances && result.compliances.length > 0) {
+                html += '<div class="positive-aspects">';
+                html += '<div class="section-subtitle">✅ 준수사항</div>';
+                result.compliances.forEach(compliance => {
+                    // compliance는 [element, principle, reason, level] 형태
+                    const [element, principle, reason, level] = compliance;
+                    
+                    html += '<div class="positive-item">';
+                    html += `<div class="positive-item-text"><strong>${principle}:</strong> ${reason} (${element})</div>`;
+                    html += '</div>';
+                });
+                html += '</div>';
+            }
+            
+            // 추천사항 (배열 형태)
+            if (result.recommendations && result.recommendations.length > 0) {
+                html += '<div class="recommendations">';
+                html += '<div class="section-subtitle">💡 추천사항</div>';
+                result.recommendations.forEach(recommendation => {
+                    // recommendation은 [priority, suggestion, impact] 형태
+                    const [priority, suggestion, impact] = recommendation;
+                    const priorityBadge = priority === 'high' ? '🔴' : (priority === 'medium' ? '🟡' : '🟢');
+                    
+                    html += '<div class="recommendation-item">';
+                    html += `<div class="recommendation-header">${priorityBadge} ${priority.toUpperCase()}</div>`;
+                    html += `<div class="recommendation-text">${suggestion}</div>`;
+                    if (impact) {
+                        html += `<div class="recommendation-benefit">✨ <strong>효과:</strong> ${impact}</div>`;
+                    }
+                    html += '</div>';
+                });
+                html += '</div>';
+            }
+            
+            // 간단한 형태의 응답 처리 (이전 버전과의 호환성)
+            if (result.score && typeof result.score === 'string' && (result.issues || result.suggestions)) {
+                // 점수 표시
+                const scoreClass = getScoreClass(result.score);
+                html += `<div class="score-badge ${scoreClass}">점수: ${result.score}/10</div>`;
+                
+                // 문제점 표시
+                if (result.issues && result.issues.length > 0) {
+                    html += '<div class="violations">';
+                    html += '<div class="section-subtitle">⚠️ 발견된 문제점</div>';
+                    result.issues.forEach(issue => {
+                        html += `<div class="violation-item medium">`;
+                        html += `<div class="violation-text">${issue}</div>`;
+                        html += '</div>';
+                    });
+                    html += '</div>';
+                }
+                
+                // 개선 제안 표시
+                if (result.suggestions && result.suggestions.length > 0) {
+                    html += '<div class="recommendations">';
+                    html += '<div class="section-subtitle">💡 개선 제안</div>';
+                    result.suggestions.forEach(suggestion => {
+                        html += '<div class="recommendation-item">';
+                        html += `<div class="recommendation-text">${suggestion}</div>`;
+                        html += '</div>';
+                    });
+                    html += '</div>';
+                }
+                
+                html += '</div>';
+                return html;
+            }
+            
+            // 사내 원칙 준수 점수 (이전 버전과의 호환성)
+            if (result.overall_compliance_score) {
+                const scoreClass = getScoreClass(result.overall_compliance_score);
+                html += `<div class="score-badge ${scoreClass}">사내 원칙 준수 점수: ${result.overall_compliance_score}/10</div>`;
+            }
+            
+            // 기존 상세 구조 처리 (이전 버전과의 호환성)
+            if (result.violations && result.violations.length > 0 && typeof result.violations[0] === 'object') {
+                html += '<div class="violations">';
+                html += '<div class="section-subtitle">⚠️ 사내 규칙 위반사항</div>';
+                result.violations.forEach(violation => {
+                    const severityClass = violation.severity === 'critical' ? 'high' : (violation.severity || 'medium');
+                    html += `<div class="violation-item ${severityClass}">`;
+                    html += `<div class="violation-header">${violation.category || '일반'} - ${violation.element || '해당 요소'}</div>`;
+                    
+                    if (violation.rule_violated) {
+                        html += `<div class="violation-text"><strong>위반 규칙:</strong> ${violation.rule_violated}</div>`;
+                    }
+                    
+                    if (violation.current_state) {
+                        html += `<div class="violation-text"><strong>현재 상태:</strong> ${violation.current_state}</div>`;
+                    }
+                    
+                    if (violation.required_state) {
+                        html += `<div class="violation-text"><strong>요구 상태:</strong> ${violation.required_state}</div>`;
+                    }
+                    
+                    if (violation.fix_action) {
+                        html += `<div class="violation-fix">💡 <strong>수정 방법:</strong> ${violation.fix_action}</div>`;
+                    }
+                    
+                    html += '</div>';
+                });
+                html += '</div>';
+            }
+            
+            // 메시지가 있는 경우 (파싱 실패 등)
+            if (result.message) {
+                html += `<div class="section-subtitle">📄 메시지</div>`;
+                html += `<div style="padding: 8px; background: var(--figma-color-bg-secondary); border-radius: 4px; margin-bottom: 12px;">${result.message}</div>`;
+            }
+            
+            // 원본 분석 결과가 있는 경우 (파싱 실패시)
+            if (result.raw_analysis) {
+                html += `<div class="section-subtitle">📄 원본 분석 결과</div>`;
+                html += `<pre style="background: var(--figma-color-bg-secondary); padding: 8px; border-radius: 4px; font-size: 10px; max-height: 200px; overflow-y: auto; white-space: pre-wrap;">${result.raw_analysis}</pre>`;
+            }
+            
+            html += '</div>';
+            return html;
+        }
+        
+        // 결과 표시
+        function displayResult(result) {
+            try {
+                let htmlContent;
+                
+                // 디버깅 정보가 있는 경우 (파싱 실패 등)
+                if (result.raw_response && result.parse_error) {
+                    htmlContent = `
+                        <div class="result error">
+                            <h3>⚠️ JSON 파싱 오류</h3>
+                            <p><strong>파싱 에러:</strong> ${result.parse_error}</p>
+                            <br>
+                            <p><strong>원본 응답:</strong></p>
+                            <pre style="background: var(--figma-color-bg-secondary); padding: 8px; border-radius: 4px; font-size: 10px; max-height: 200px; overflow-y: auto;">${result.raw_response}</pre>
+                        </div>
+                    `;
+                } else if (typeof result === 'string') {
+                    // 문자열인 경우 JSON 파싱 시도
+                    try {
+                        const parsed = JSON.parse(result);
+                        htmlContent = formatAnalysisResult(parsed);
+                    } catch (e) {
+                        htmlContent = `
+                            <div class="result">
+                                <h3>📋 응답 내용</h3>
+                                <pre style="background: var(--figma-color-bg-secondary); padding: 8px; border-radius: 4px; font-size: 10px; max-height: 200px; overflow-y: auto;">${result}</pre>
+                            </div>
+                        `;
+                    }
+                } else if (typeof result === 'object' && result !== null) {
+                    // 객체인 경우 구조화된 표시
+                    htmlContent = formatAnalysisResult(result);
+                } else {
+                    htmlContent = `
+                        <div class="result">
+                            <h3>📋 응답 내용</h3>
+                            <pre style="background: var(--figma-color-bg-secondary); padding: 8px; border-radius: 4px; font-size: 10px;">${String(result)}</pre>
+                        </div>
+                    `;
+                }
+                
+                elements.resultContent.innerHTML = htmlContent;
+            } catch (error) {
+                elements.resultContent.innerHTML = `<div class="result error">결과 표시 중 오류가 발생했습니다: ${error.message}</div>`;
+            }
+        }
+        
+        // 에러 표시
+        function displayError(errorMessage) {
+            elements.resultContent.innerHTML = `<div class="result error">❌ ${errorMessage}</div>`;
+        }
+        
+        // 메시지 수신 처리
+        window.onmessage = (event) => {
+            const { type, payload } = event.data.pluginMessage || {};
+            
+            switch (type) {
+                case 'SELECTION_INFO':
+                    updateSelectionInfo(payload);
+                    break;
+                    
+                case 'ANALYSIS_LOADING':
+                    setLoading(payload);
+                    break;
+                    
+                case 'ANALYSIS_RESULT':
+                    displayResult(payload);
+                    break;
+                    
+                case 'ANALYSIS_ERROR':
+                    displayError(payload);
+                    break;
+            }
+        };
+        
+        // 버튼 이벤트 리스너
+        elements.refreshBtn.onclick = () => {
+            parent.postMessage({ 
+                pluginMessage: { type: 'REQUEST_SELECTION' } 
+            }, '*');
+        };
+        
+        elements.analyzeBtn.onclick = () => {
+            if (isAnalyzing) return;
+            
+            parent.postMessage({ 
+                pluginMessage: { type: 'RUN_ANALYSIS' } 
+            }, '*');
+        };
+        
+        elements.closeBtn.onclick = () => {
+            parent.postMessage({ 
+                pluginMessage: { type: 'CLOSE_PLUGIN' } 
+            }, '*');
+        };
+        
+        // 초기 선택 정보 요청
+        parent.postMessage({ 
+            pluginMessage: { type: 'REQUEST_SELECTION' } 
+        }, '*');
+</script>
+</body>
+</html>
